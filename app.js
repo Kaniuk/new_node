@@ -1,80 +1,56 @@
-/*
-Створіть папку
-В тій папці створіть 5 папок і 5 файлів
-І за допомогою модулю fs виведіть в консоль, чи це папка чи це файл
-FILE: {fileName}
-FOLDER: {folderName}*/
+const express = require('express');
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
-const fs = require('node:fs');
-const path = require('node:path');
+const users = require('./db/users');
 
-const filePath = path.join(__dirname, 'mainFolder');
-
-fs.mkdir(filePath, (err) => {
-    if (err) throw new Error(err.message);
+app.get('/users', (req, res) => {
+    res.json({
+        data: users
+    });
 });
-
-const firstFile = path.join(__dirname, 'mainFolder', 'firstText.txt');
-fs.writeFile(firstFile, 'Hello!!!', (err) => {
-    if (err) throw new Error(err.message);
+app.get('/users/:id', (req, res) => {
+    const {id} = req.params;
+    res.json({
+        data: users[+id - 1]
+    });
 });
-const secondFile = path.join(__dirname, 'mainFolder', 'secondText.txt');
-fs.writeFile(secondFile, 'Hello!!!', (err) => {
-    if (err) throw new Error(err.message);
-});
-const thirdFile = path.join(__dirname, 'mainFolder', 'thirdText.txt');
-fs.writeFile(thirdFile, 'Hello!!!', (err) => {
-    if (err) throw new Error(err.message);
-});
-const fourthFile = path.join(__dirname, 'mainFolder', 'fourthText.txt');
-fs.writeFile(fourthFile, 'Hello!!!', (err) => {
-    if (err) throw new Error(err.message);
-});
-const fifthFile = path.join(__dirname, 'mainFolder', 'fifthText.txt');
-fs.writeFile(fifthFile, 'Hello!!!', (err) => {
-    if (err) throw new Error(err.message);
-});
+app.post('/users', (req, res) => {
+    if (req.body.name.length >= 3 && req.body.age > 0) {
+        users.push(req.body);
 
-const dir1 = path.join(__dirname, 'mainFolder','dir1');
-
-fs.mkdir(dir1, (err) => {
-    if (err) throw new Error(err.message);
-});
-
-const dir2 = path.join(__dirname, 'mainFolder','dir2');
-
-fs.mkdir(dir2, (err) => {
-    if (err) throw new Error(err.message);
-});
-
-const dir3 = path.join(__dirname, 'mainFolder','dir3');
-
-fs.mkdir(dir3, (err) => {
-    if (err) throw new Error(err.message);
-});
-
-const dir4 = path.join(__dirname, 'mainFolder','dir4');
-
-fs.mkdir(dir4, (err) => {
-    if (err) throw new Error(err.message);
-});
-
-const dir5 = path.join(__dirname, 'mainFolder','dir5');
-
-fs.mkdir(dir5, (err) => {
-    if (err) throw new Error(err.message);
-});
-
-
-fs.readdir(filePath, (err, files) => {
-    if (err)
-        throw new Error(err.message);
-    else {
-        console.log("\Filenames with the .txt extension:");
-        files.forEach(file => {
-            if (path.extname(file) === ".txt") {
-                console.log('this is file', file);
-            } else console.log('DIRRRR!!!',file)
-        })
+        res.status(201).json({
+            message: 'User created'
+        });
+    } else {
+        res.status(403).json({
+            message: 'Not valid data'
+        });
     }
-})
+
+
+});
+app.put('/users/:id', (req, res) => {
+    const {id} = req.params;
+
+    users[id] = req.body;
+    res.json({
+        message: 'User updated'
+    });
+});
+app.delete('/users/:id', (req, res) => {
+    const {id} = req.params;
+    users.splice(+id - 1, 1);
+
+    res.status(204).json({
+        message: 'No content'
+    });
+});
+
+
+const PORT = 5001;
+
+app.listen(PORT, () => {
+    console.log(`Server has successfully started on PORT ${PORT}`);
+});
