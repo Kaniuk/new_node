@@ -3,49 +3,96 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
-const users = require('./db/users');
+const users = require('./db.json');
+const fsService = require('./fs.service');
 
-app.get('/users', (req, res) => {
-    res.json({
-        data: users
-    });
+app.get('/users', async (req, res) => {
+    const users = await fsService.reader();
+    res.json(users);
 });
-app.get('/users/:id', (req, res) => {
+
+app.post('/users', async (req, res) => {
+    try {
+        const {name, email} = req.body;
+        if (!name || name.length < 2) {
+            throw new Error('Wrong name');
+        }
+        if (!email || !email.includes('@')) {
+            throw new Error('Wrong email');
+        }
+
+        const users = await fsService.reader();
+        const lastId = users[users.length - 1].id;
+        const newUser = {id: lastId + 1, name, email};
+        users.push(newUser);
+        await fsService.writer(users);
+        res.status(201).json('New user created');
+
+    } catch (e) {
+        res.status(400).json(e.message);
+    }
+});
+
+app.get('/users/:id', async (req, res) => {
+    const users = await fsService.reader();
     const {id} = req.params;
-    res.json({
-        data: users[+id - 1]
-    });
+    const user = users.find((user) => user.id === Number(id));
+    res.json(user);
+    console.log(user);
 });
-app.post('/users', (req, res) => {
-    if (req.body.name.length >= 3 && req.body.age > 0) {
-        users.push(req.body);
 
-        res.status(201).json({
-            message: 'User created'
+app.delete('/users/:id', async (req, res) => {
+
+    try {
+        const {id} = req.params;
+
+        const users = await fsService.reader();
+        const index = users.findIndex((user) => user.id === Number(id));
+        if (index === -1) {
+
+            throw new Error('User not exist');
+        }
+
+        users.splice(index, 1);
+
+        await fsService.writer(users);
+
+        res.status(204).json({
+            message: 'No content'
         });
-    } else {
-        res.status(403).json({
-            message: 'Not valid data'
-        });
+    } catch (e) {
+        res.status(404).json(e.message);
     }
 
-
 });
-app.put('/users/:id', (req, res) => {
-    const {id} = req.params;
 
-    users[id] = req.body;
-    res.json({
-        message: 'User updated'
-    });
-});
-app.delete('/users/:id', (req, res) => {
-    const {id} = req.params;
-    users.splice(+id - 1, 1);
+app.put('/users/:id', async (req, res) => {
+    try {
+        const {id} = req.params;
+        const {name, email} = req.body;
 
-    res.status(204).json({
-        message: 'No content'
-    });
+        if (!name || name.length < 2) {
+            throw new Error('Wrong name');
+        }
+        if (!email || !email.includes('@')) {
+            throw new Error('Wrong email');
+        }
+
+        const users = await fsService.reader();
+        const user = users.find((user) => user.id === Number(id));
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        user.email = email;
+        user.name = name;
+
+        await fsService.writer(users);
+
+        res.status(201).json(user);
+    } catch (e) {
+        res.status(404).json(e.message);
+    }
 });
 
 
